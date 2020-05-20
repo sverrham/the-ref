@@ -4,7 +4,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-
+-- Simple counter for clock cycles between pps pulses.
+--
 entity pps_counter is
     port (
         clk: in std_logic;
