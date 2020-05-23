@@ -11,24 +11,24 @@ end tb_pps_counter;
 
 architecture rtl of tb_pps_counter is
 
-    signal clk : std_logic := '0';
-    signal pps : std_logic := '0';
+    signal clk_i : std_logic := '0';
+    signal pps_i : std_logic := '0';
     signal runing : std_logic := '1';
 
-    signal last_count: unsigned(31 downto 0);
-    signal last_count_vld: std_logic;
+    signal last_count_o: unsigned(31 downto 0);
+    signal last_count_vld_o: std_logic;
 begin
 
-    clk <= not clk after 100 ns when runing = '1' else '0';
+    clk_i <= not clk_i after 100 ns when runing = '1' else '0';
 
     stimuli : process
     begin
         report "Start of test" severity note;
         for i in 0 to 10 loop
             wait for 10 ms;
-            pps <= '1';
+            pps_i <= '1';
             wait for 1 us;
-            pps <= '0';
+            pps_i <= '0';
         end loop;
 
         runing <= '0';
@@ -39,16 +39,16 @@ begin
 
     check_output: process
     begin
-        wait until rising_edge(last_count_vld);
-        assert last_count /= X"00000000" report "Unexpected count" severity error;
+        wait until rising_edge(last_count_vld_o);
+        assert last_count_o /= X"00000000" report "Unexpected count" severity error;
     end process;
 
     dut : entity work.pps_counter
     port map(
-        clk => clk,
-        pps => pps,
-        last_count => last_count,
-        last_count_vld => last_count_vld
+        clk_i => clk_i,
+        pps_i => pps_i,
+        last_count_o => last_count_o,
+        last_count_vld_o => last_count_vld_o
     );
 
 end rtl;

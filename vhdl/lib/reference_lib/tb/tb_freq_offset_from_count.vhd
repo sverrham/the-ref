@@ -11,35 +11,35 @@ end tb_freq_offset_from_count;
 
 architecture rtl of tb_freq_offset_from_count is
 
-    signal i_clk : std_logic := '0';
+    signal clk_i : std_logic := '0';
     signal runing : std_logic := '1';
 
-    signal i_count : unsigned(31 downto 0) := (others => '0');
-    signal i_count_vld : std_logic := '0';
-    signal o_error_ppb : integer range -10000 to 10000;
-    signal o_error_ppb_vld: std_logic;
+    signal count_i : unsigned(31 downto 0) := (others => '0');
+    signal count_vld_i : std_logic := '0';
+    signal error_ppb_o : integer range -10000 to 10000;
+    signal error_ppb_vld_o: std_logic;
 begin
 
-    i_clk <= not i_clk after 10 ns when runing = '1' else '0';
+    clk_i <= not clk_i after 10 ns when runing = '1' else '0';
 
     stimuli : process
     begin
         report "Start of test" severity note;
      
         wait for 10 us;
-        wait until rising_edge(i_clk);
-        i_count <= to_unsigned(10000100, 32);
-        i_count_vld <= '1';
-        wait until rising_edge(i_clk);
-        i_count <= to_unsigned(0, 32);
-        i_count_vld <= '0';
+        wait until rising_edge(clk_i);
+        count_i <= to_unsigned(10000100, 32);
+        count_vld_i <= '1';
+        wait until rising_edge(clk_i);
+        count_i <= to_unsigned(0, 32);
+        count_vld_i <= '0';
         wait for 1 us;
-        wait until rising_edge(i_clk);
-        i_count <= to_unsigned(10000001, 32);
-        i_count_vld <= '1';
-        wait until rising_edge(i_clk);
-        i_count <= to_unsigned(0, 32);
-        i_count_vld <= '0';
+        wait until rising_edge(clk_i);
+        count_i <= to_unsigned(10000001, 32);
+        count_vld_i <= '1';
+        wait until rising_edge(clk_i);
+        count_i <= to_unsigned(0, 32);
+        count_vld_i <= '0';
         wait for 1 us;
         
         runing <= '0';
@@ -50,10 +50,10 @@ begin
 
     check_output: process
     begin
-        wait until rising_edge(o_error_ppb_vld);
-        assert o_error_ppb = 10000 report "Unexpected error " & integer'image(o_error_ppb) & " ppm" severity error;
-        wait until rising_edge(o_error_ppb_vld);
-        assert o_error_ppb = 100 report "Unexpected error " & integer'image(o_error_ppb) & " ppm" severity error;
+        wait until rising_edge(error_ppb_vld_o);
+        assert error_ppb_o = 10000 report "Unexpected error " & integer'image(error_ppb_o) & " ppm" severity error;
+        wait until rising_edge(error_ppb_vld_o);
+        assert error_ppb_o = 100 report "Unexpected error " & integer'image(error_ppb_o) & " ppm" severity error;
     end process;
 
 
@@ -62,11 +62,11 @@ begin
         g_frequency => 10.0e6
     )
     port map(
-        i_clk => i_clk,
-        i_count => i_count,
-        i_count_vld => i_count_vld,
-        o_error_ppb => o_error_ppb,
-        o_error_ppb_vld => o_error_ppb_vld
+        clk_i => clk_i,
+        count_i => count_i,
+        count_vld_i => count_vld_i,
+        error_ppb_o => error_ppb_o,
+        error_ppb_vld_o => error_ppb_vld_o
     );
 
 end rtl;

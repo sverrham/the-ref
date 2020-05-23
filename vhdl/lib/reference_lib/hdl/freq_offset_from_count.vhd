@@ -12,11 +12,11 @@ entity freq_offset_from_count is
         g_frequency : in real
     );
     port (
-        i_clk: in std_logic;
-        i_count: in unsigned(31 downto 0);
-        i_count_vld: in std_logic;
-        o_error_ppb : out integer range -10000 to 10000;
-        o_error_ppb_vld : out std_logic
+        clk_i: in std_logic;
+        count_i: in unsigned(31 downto 0);
+        count_vld_i: in std_logic;
+        error_ppb_o : out integer range -10000 to 10000;
+        error_ppb_vld_o : out std_logic
         );
 end freq_offset_from_count;
 
@@ -32,15 +32,15 @@ architecture rtl of freq_offset_from_count is
     signal state : state_type := idle;
 begin
 
-    p_error : process (i_clk)
+    p_error : process (clk_i)
     begin
-        if rising_edge(i_clk) then
-            o_error_ppb_vld <= '0';
+        if rising_edge(clk_i) then
+            error_ppb_vld_o <= '0';
             case state is
                 when idle =>
-                    if i_count_vld = '1' then
+                    if count_vld_i = '1' then
                         state <= calc_error;
-                        offset <= to_integer(i_count - c_expected_count);
+                        offset <= to_integer(count_i - c_expected_count);
                     end if;
 
                 when calc_error =>
@@ -49,8 +49,8 @@ begin
 
                 when output_error =>
                     state <= idle;
-                    o_error_ppb <= error_ppb;
-                    o_error_ppb_vld <= '1';
+                    error_ppb_o <= error_ppb;
+                    error_ppb_vld_o <= '1';
             end case;
         end if;
     end process;
