@@ -17,3 +17,11 @@ with a measurement period of 1s when using the gps pps (assuming the pps is trut
 ## GPS PPS
 
 Need to figure out how accurate the pps actually is.
+
+## Testing
+
+Testing with a Ublox NEO-M8N GPS module, and the Sipeed tang-nano FPGA board.
+The reference tested is the 24MHz crystal on the tang-nano board no specification found on the crystal.
+With the system on the desk running the counts found seems stable to +-1 count.
+- count between 24 001 015 and 24 001 016 with a resulting ppb error of 42 291ppb and 42 333ppb
+- This shows quite stable measurement.
