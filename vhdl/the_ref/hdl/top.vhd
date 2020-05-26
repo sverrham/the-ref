@@ -27,7 +27,7 @@ architecture rtl of the_ref_top is
 
     signal count : unsigned(31 downto 0);
     signal count_vld : std_logic;
-    signal error_ppb : integer range -10000 to 10000;
+    signal error_ppb : integer range -100000 to 100000;
     signal error_ppb_vld : std_logic;
 
     signal pps_meta : std_logic_vector(1 downto 0) := (others => '0');
@@ -115,7 +115,7 @@ begin
     begin
         if  rising_edge(clk_i) then
             if error_ppb_vld = '1' then
-                if (error_ppb > 9000 or error_ppb < -9000) then
+                if (error_ppb > 10000 or error_ppb < -10000) then
                     high_offset <= '1';
                 else
                     high_offset <= '0';
@@ -174,7 +174,7 @@ begin
                     end if;
                 when no_pps_type =>
                     if tx_busy = '0' and tx_ena = '0' then
-                        tx_data <= x"30";
+                        tx_data <= x"00";
                         tx_ena <= '1';
                         state <= no_pps_length;
                     end if;
@@ -195,7 +195,7 @@ begin
 
                 when count_type =>
                     if tx_busy = '0' and tx_ena = '0' then
-                        tx_data <= x"31";
+                        tx_data <= x"01";
                         tx_ena <= '1';
                         state <= count_length;
                     end if;
@@ -209,7 +209,7 @@ begin
 
                 when count_value =>
                     if tx_busy = '0' and tx_ena = '0' then
-                        tx_data <= cur_count(31-8*cnt downto 28-8*cnt);
+                        tx_data <= cur_count(8+8*cnt downto 8*cnt);
                         tx_ena <= '1';
                         cnt <= cnt + 1;
                         if cnt = 3 then
@@ -219,7 +219,7 @@ begin
 
                 when error_type =>
                     if tx_busy = '0' and tx_ena = '0' then
-                        tx_data <= x"32";
+                        tx_data <= x"02";
                         tx_ena <= '1';
                         state <= error_length;
                     end if;
@@ -233,7 +233,7 @@ begin
 
                 when error_value =>
                     if tx_busy = '0' and tx_ena = '0' then
-                        tx_data <= cur_error_ppb(31-8*cnt downto 28-8*cnt);
+                        tx_data <= cur_error_ppb(8+8*cnt downto 8*cnt);
                         tx_ena <= '1';
                         cnt <= cnt + 1;
                         if cnt = 3 then

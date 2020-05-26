@@ -15,7 +15,7 @@ entity freq_offset_from_count is
         clk_i: in std_logic;
         count_i: in unsigned(31 downto 0);
         count_vld_i: in std_logic;
-        error_ppb_o : out integer range -10000 to 10000;
+        error_ppb_o : out integer range -100000 to 100000;
         error_ppb_vld_o : out std_logic
         );
 end freq_offset_from_count;
@@ -26,7 +26,7 @@ architecture rtl of freq_offset_from_count is
     constant c_ppm : integer range 0 to 100 := natural(g_frequency/1.0e6);
     
     signal offset : integer range -10000 to 10000 := 0;
-    signal error_ppb : integer range -10000 to 10000 := 0;
+    signal error_ppb : integer range -100000 to 100000 := 0;
 
     type state_type is (idle, calc_error, output_error);
     signal state : state_type := idle;
