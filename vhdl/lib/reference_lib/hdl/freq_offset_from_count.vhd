@@ -15,7 +15,7 @@ entity freq_offset_from_count is
         clk_i: in std_logic;
         count_i: in unsigned(31 downto 0);
         count_vld_i: in std_logic;
-        error_ppb_o : out integer range -100000 to 100000;
+        error_ppb_o : out signed(31 downto 0);
         error_ppb_vld_o : out std_logic
         );
 end freq_offset_from_count;
@@ -25,14 +25,16 @@ architecture rtl of freq_offset_from_count is
     constant c_expected_count : unsigned(31 downto 0) := to_unsigned(natural(g_frequency), 32);
     constant c_ppm : integer range 0 to 100 := natural(g_frequency/1.0e6);
     
-    signal offset : integer range -10000 to 10000 := 0;
-    signal error_ppb : integer range -100000 to 100000 := 0;
+    signal offset : integer range -(2**30)-1 to 2**30; ---2_147_483_646 to 2_147_483_647;
+    signal error_ppb : signed(31 downto 0) := (others => '0');
 
     type state_type is (idle, calc_error, output_error);
     signal state : state_type := idle;
 begin
 
     p_error : process (clk_i)
+    variable v_offset : signed(31 downto 0);
+    variable v_error_ppm : signed(31 downto 0);
     begin
         if rising_edge(clk_i) then
             error_ppb_vld_o <= '0';
@@ -40,12 +42,14 @@ begin
                 when idle =>
                     if count_vld_i = '1' then
                         state <= calc_error;
-                        offset <= to_integer(count_i - c_expected_count);
+                        v_offset := signed(count_i - c_expected_count);
+                        offset <= to_integer(v_offset);
                     end if;
 
                 when calc_error =>
                     state <= output_error;
-                    error_ppb <= offset * 1000 / c_ppm;
+                    v_error_ppm := to_signed(offset * 1000, 32);
+                    error_ppb <= v_error_ppm / c_ppm;
 
                 when output_error =>
                     state <= idle;

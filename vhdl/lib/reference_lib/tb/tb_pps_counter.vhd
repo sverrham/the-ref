@@ -4,7 +4,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library work;
+library reference_lib;
 
 entity tb_pps_counter is
 end tb_pps_counter;
@@ -43,7 +43,7 @@ begin
         assert last_count_o /= X"00000000" report "Unexpected count" severity error;
     end process;
 
-    dut : entity work.pps_counter
+    dut : entity reference_lib.pps_counter
     port map(
         clk_i => clk_i,
         pps_i => pps_i,

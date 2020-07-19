@@ -17,6 +17,8 @@ end the_ref_top;
 
 architecture rtl of the_ref_top is
 
+    -- signal osc_clk : std_logic;
+
     signal tx_ena : std_logic := '0';
     signal tx_data : std_logic_vector(7 downto 0) := (others => '0');
     signal rx_busy : std_logic;
@@ -25,20 +27,36 @@ architecture rtl of the_ref_top is
     signal rx_vld : std_logic;
     signal tx_busy : std_logic;
 
-    signal count : unsigned(31 downto 0);
-    signal count_vld : std_logic;
-    signal error_ppb : integer range -100000 to 100000;
-    signal error_ppb_vld : std_logic;
-
     signal pps_meta : std_logic_vector(1 downto 0) := (others => '0');
     signal rx_meta : std_logic_vector(1 downto 0) := (others => '0');
 
     constant c_one_point_five_seconds : integer := 36000000;
     signal pps_count : integer range 0 to c_one_point_five_seconds;
     signal no_pps_received : std_logic := '0';
-    signal no_pps_received_debug : std_logic := '0';
-    signal high_offset : std_logic := '0';
+    signal glitch_on_pps : std_logic := '0';
+    -- signal no_pps_received_debug : std_logic := '0';
+    -- signal high_offset : std_logic := '0';
+    signal last_pps : std_logic := '0';
+
+
+    signal msg_req:  std_logic;
+    signal msg_busy:  std_logic;
+    signal msg_data :  std_logic_vector(7 downto 0);
+    signal msg_data_vld :  std_logic;
+
+    component Gowin_OSC
+    port (
+        oscout: out std_logic
+    );
+    end component;
+
 begin
+
+    
+    -- your_instance_name: Gowin_OSC
+    -- port map (
+    --     oscout => osc_clk
+    -- );
 
     -- Metastability pps
     meta_proc : process(clk_i)
@@ -51,6 +69,7 @@ begin
             rx_meta(1) <= rx_meta(0);
         end if;
     end process;
+
 
     uart : entity com_lib.uart
     generic map(
@@ -72,25 +91,33 @@ begin
         tx => tx
     );
 
+    -- tx_ena <= rx_vld;
+    -- tx_data <= rx_data;
 
-    pps_counter : entity reference_lib.pps_counter
-    port map(
-        clk_i => clk_i,
-        pps_i => pps_meta(1),
-        last_count_o => count,
-        last_count_vld_o => count_vld
-    );
-    
-    freq_offset_from_count : entity reference_lib.freq_offset_from_count
-    generic map(
+
+    -- com_arbiter: process(clk_i)
+    -- begin
+    --     if rising_edge(clk_i) then
+
+    --     end if;
+    -- end process;
+
+    -- Arbiter missing
+    msg_busy <= tx_busy;
+    tx_data  <= msg_data;
+    tx_ena   <= msg_data_vld;
+
+    freq_measure_wrapper: entity reference_lib.freq_measure_wrapper
+    generic map (
         g_frequency => 24.0e6
     )
-    port map(
+    port map (
         clk_i => clk_i,
-        count_i => count,
-        count_vld_i => count_vld,
-        error_ppb_o => error_ppb,
-        error_ppb_vld_o => error_ppb_vld
+        pps_i => pps_meta(1),
+        msg_req_o => msg_req,
+        msg_busy_i => msg_busy,
+        msg_data_o => msg_data,
+        msg_data_vld_o => msg_data_vld
     );
 
     -- Debug
@@ -98,29 +125,22 @@ begin
     begin
         if rising_edge(clk_i) then
             -- Check if pps pulses once pr ~1.5 sec
-            pps_count <= pps_count - 1;
-            no_pps_received_debug <= '0';
-            if pps_count = 0 then
+            last_pps <= pps_meta(1);
+            pps_count <= pps_count + 1;
+            -- no_pps_received_debug <= '0';
+            if pps_count = c_one_point_five_seconds then
                 no_pps_received <= '1';
-                no_pps_received_debug <= '1';
-                pps_count <= c_one_point_five_seconds;
-            elsif pps_meta(1) = '1' then
+                -- no_pps_received_debug <= '1';
+                pps_count <= 0;
+            elsif pps_meta(1) = '1' and last_pps = '0' then
                 no_pps_received <= '0';
-                pps_count <= c_one_point_five_seconds;
-            end if;
-        end if;
-    end process;
+                pps_count <= 0;
 
-    error_ppb_proc : process(clk_i)
-    begin
-        if  rising_edge(clk_i) then
-            if error_ppb_vld = '1' then
-                if (error_ppb > 10000 or error_ppb < -10000) then
-                    high_offset <= '1';
-                else
-                    high_offset <= '0';
+                glitch_on_pps <= '0';
+                if pps_count < 1024 then
+                    glitch_on_pps <= '1';
                 end if;
-            end if; 
+            end if;
         end if;
     end process;
 
@@ -128,137 +148,69 @@ begin
     begin
         if rising_edge(clk_i) then
             rgb_o <= "101"; --Inverted 1 off 0 on led.architecture
-            if no_pps_received = '1' then
-                rgb_o <= "011";
-            elsif high_offset = '1' then
+            if glitch_on_pps = '1' then
                 rgb_o <= "110";
+            elsif no_pps_received = '1' then
+                rgb_o <= "011";
             end if;
         end if;
     end process;
 
-    debug_message_block : block is
-        type state_t is (idle, no_pps_type, no_pps_length, no_pps_value, new_line, car_return, 
-                         count_type, count_length, count_value,
-                         error_type, error_length, error_value);
-        signal state : state_t := idle;
-        signal cur_count : unsigned(31 downto 0);
-        signal cnt : integer range 0 to 7 := 0;
+    -- debug_message_block : block is
+    --     type state_t is (idle, no_pps_type, no_pps_length, no_pps_value, new_line, car_return);
+    --     signal state : state_t := idle;
+    -- begin
 
-        signal error_vld : std_logic := '0';
-        signal cur_error_ppb : signed(31 downto 0);
-    begin
-
-    debug_info_proc : process(clk_i)
-    begin
-        if rising_edge(clk_i) then
-            -- Send debug info over uart.
-            tx_ena <= '0';
-
-            if error_ppb_vld = '1' then
-                error_vld <= '1';
-                cur_error_ppb <= to_signed(error_ppb, 32);
-            end if;
+    -- debug_info_proc : process(clk_i)
+    -- begin
+    --     if rising_edge(clk_i) then
+    --         -- Send debug info over uart.
+    --         tx_ena <= '0';
             
-            case state is
-                when idle =>
-                    if no_pps_received_debug = '1' then
-                        state <= no_pps_type;
-                    elsif count_vld = '1' then
-                        cur_count <= count;
-                        cnt <= 0;
-                        state <= count_type;
-                    elsif error_vld = '1' then
-                        cnt <= 0;
-                        error_vld <= '0';
-                        state <= error_type;
-                    end if;
-                when no_pps_type =>
-                    if tx_busy = '0' and tx_ena = '0' then
-                        tx_data <= x"00";
-                        tx_ena <= '1';
-                        state <= no_pps_length;
-                    end if;
+    --         case state is
+    --             when idle =>
+    --                 if no_pps_received_debug = '1' then
+    --                     state <= no_pps_type;
+    --                 end if;
+    --             when no_pps_type =>
+    --                 if tx_busy = '0' and tx_ena = '0' then
+    --                     tx_data <= x"00";
+    --                     tx_ena <= '1';
+    --                     state <= no_pps_length;
+    --                 end if;
 
-                when no_pps_length =>
-                    if tx_busy = '0' and tx_ena = '0' then
-                        tx_data <= x"03";
-                        tx_ena <= '1';
-                        state <= no_pps_value;
-                    end if;
+    --             when no_pps_length =>
+    --                 if tx_busy = '0' and tx_ena = '0' then
+    --                     tx_data <= x"03";
+    --                     tx_ena <= '1';
+    --                     state <= no_pps_value;
+    --                 end if;
                     
-                when no_pps_value =>
-                    if tx_busy = '0' and tx_ena = '0' then
-                        tx_data <= x"30";
-                        tx_ena <= '1';
-                        state <= car_return;
-                    end if;
+    --             when no_pps_value =>
+    --                 if tx_busy = '0' and tx_ena = '0' then
+    --                     tx_data <= x"30";
+    --                     tx_ena <= '1';
+    --                     state <= car_return;
+    --                 end if;
 
-                when count_type =>
-                    if tx_busy = '0' and tx_ena = '0' then
-                        tx_data <= x"01";
-                        tx_ena <= '1';
-                        state <= count_length;
-                    end if;
+    --             when car_return =>
+    --                 if tx_busy = '0' and tx_ena = '0' then
+    --                     tx_data <= x"0D";
+    --                     tx_ena <= '1';
+    --                     state <= new_line;
+    --                 end if;
 
-                when count_length =>
-                    if tx_busy = '0' and tx_ena = '0' then
-                        tx_data <= x"06";
-                        tx_ena <= '1';
-                        state <= count_value;
-                    end if;
-
-                when count_value =>
-                    if tx_busy = '0' and tx_ena = '0' then
-                        tx_data <= cur_count(8+8*cnt downto 8*cnt);
-                        tx_ena <= '1';
-                        cnt <= cnt + 1;
-                        if cnt = 3 then
-                            state <= car_return;
-                        end if;
-                    end if;
-
-                when error_type =>
-                    if tx_busy = '0' and tx_ena = '0' then
-                        tx_data <= x"02";
-                        tx_ena <= '1';
-                        state <= error_length;
-                    end if;
-
-                when error_length =>
-                    if tx_busy = '0' and tx_ena = '0' then
-                        tx_data <= x"06";
-                        tx_ena <= '1';
-                        state <= error_value;
-                    end if;
-
-                when error_value =>
-                    if tx_busy = '0' and tx_ena = '0' then
-                        tx_data <= cur_error_ppb(8+8*cnt downto 8*cnt);
-                        tx_ena <= '1';
-                        cnt <= cnt + 1;
-                        if cnt = 3 then
-                            state <= car_return;
-                        end if;
-                    end if;
-
-                when car_return =>
-                    if tx_busy = '0' and tx_ena = '0' then
-                        tx_data <= x"0D";
-                        tx_ena <= '1';
-                        state <= new_line;
-                    end if;
-
-                when new_line =>
-                    if tx_busy = '0' and tx_ena = '0' then
-                        tx_data <= x"0A";
-                        tx_ena <= '1';
-                        state <= idle;
-                    end if;
+    --             when new_line =>
+    --                 if tx_busy = '0' and tx_ena = '0' then
+    --                     tx_data <= x"0A";
+    --                     tx_ena <= '1';
+    --                     state <= idle;
+    --                 end if;
 
                 
-            end case;
+    --         end case;
 
-        end if;
-    end process;
-    end block;
+    --     end if;
+    -- end process;
+    -- end block;
 end rtl;

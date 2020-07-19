@@ -4,7 +4,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library work;
+library reference_lib;
 
 entity tb_freq_offset_from_count is
 end tb_freq_offset_from_count;
@@ -16,7 +16,7 @@ architecture rtl of tb_freq_offset_from_count is
 
     signal count_i : unsigned(31 downto 0) := (others => '0');
     signal count_vld_i : std_logic := '0';
-    signal error_ppb_o : integer range -10000 to 10000;
+    signal error_ppb_o : signed(31 downto 0);
     signal error_ppb_vld_o: std_logic;
 begin
 
@@ -41,6 +41,13 @@ begin
         count_i <= to_unsigned(0, 32);
         count_vld_i <= '0';
         wait for 1 us;
+        wait until rising_edge(clk_i);
+        count_i <= to_unsigned(9990000, 32);
+        count_vld_i <= '1';
+        wait until rising_edge(clk_i);
+        count_i <= to_unsigned(0, 32);
+        count_vld_i <= '0';
+        wait for 1 us;
         
         runing <= '0';
         assert false report "End of test" severity note;
@@ -51,13 +58,15 @@ begin
     check_output: process
     begin
         wait until rising_edge(error_ppb_vld_o);
-        assert error_ppb_o = 10000 report "Unexpected error " & integer'image(error_ppb_o) & " ppm" severity error;
+        assert error_ppb_o = to_signed(10000, 32) report "Unexpected error " & to_hstring(error_ppb_o) & " ppm" severity error;
         wait until rising_edge(error_ppb_vld_o);
-        assert error_ppb_o = 100 report "Unexpected error " & integer'image(error_ppb_o) & " ppm" severity error;
+        assert error_ppb_o = to_signed(100, 32) report "Unexpected error " & to_hstring(error_ppb_o) & " ppm" severity error;
+        wait until rising_edge(error_ppb_vld_o);
+        assert error_ppb_o = to_signed(-1000000, 32) report "Unexpected error " & to_hstring(error_ppb_o) & " ppm" severity error;
     end process;
 
 
-    dut : entity work.freq_offset_from_count
+    dut : entity reference_lib.freq_offset_from_count
     generic map(
         g_frequency => 10.0e6
     )

@@ -16,9 +16,11 @@ entity pps_counter is
 end pps_counter;
 
 architecture rtl of pps_counter is
-
     signal count : unsigned(31 downto 0) := (others => '0');
+    
     signal last_pps : std_logic := '0';
+    attribute syn_preserve : boolean;
+    attribute syn_preserve of last_pps : signal is true;
 begin
 
     p_count : process (clk_i)
