@@ -6,7 +6,7 @@
         {
             "label": "VHDL Analyze",
             "type": "shell",
-            "command": "ghdl -a ${file}",
+            "command": ".\\run_tb.cmd ${relativeFile} ${relativeFileDirname} 0",
             "problemMatcher": [],
             "group": {
                 "kind": "build",
@@ -16,7 +16,7 @@
         {
             "label": "VHDL run testbench",
             "type": "shell",
-            "command": ".\\run_tb.cmd ${file}",
+            "command": ".\\run_tb.cmd ${fileBasenameNoExtension} ${relativeFileDirname} 1",
             "problemMatcher": [],
             "group": {
                 "kind": "build",
