@@ -38,19 +38,19 @@ ENTITY uart IS
 		tx_ena		:	IN	STD_LOGIC;										--initiate transmission
 		tx_data		:	IN	STD_LOGIC_VECTOR(d_width-1 DOWNTO 0);  --data to transmit
 		rx			:	IN	STD_LOGIC;										--receive pin
-		rx_busy		:	OUT	STD_LOGIC;										--data reception in progress
-		rx_error	:	OUT	STD_LOGIC;										--start, parity, or stop bit error detected
+		rx_busy		:	OUT	STD_LOGIC := '0';										--data reception in progress
+		rx_error	:	OUT	STD_LOGIC := '0';										--start, parity, or stop bit error detected
 		rx_data		:	OUT	STD_LOGIC_VECTOR(d_width-1 DOWNTO 0);	--data received
 		rx_vld      :   out std_logic;
 		tx_busy		:	OUT	STD_LOGIC;  									--transmission in progress
-		tx			:	OUT	STD_LOGIC);										--transmit pin
+		tx			:	OUT	STD_LOGIC := '1');										--transmit pin
 END uart;
 		
 ARCHITECTURE logic OF uart IS
 	TYPE 		tx_machine IS(idle, transmit);										--tranmit state machine data type
 	TYPE 		rx_machine IS(idle, receive);											--receive state machine data type
-	SIGNAL	tx_state				:	tx_machine;										--transmit state machine
-	SIGNAL	rx_state				:	rx_machine;										--receive state machine
+	SIGNAL	tx_state				:	tx_machine := idle;										--transmit state machine
+	SIGNAL	rx_state				:	rx_machine := idle;										--receive state machine
 	SIGNAL	baud_pulse			:	STD_LOGIC := '0';								--periodic pulse that occurs at the baud rate
 	SIGNAL	os_pulse				:	STD_LOGIC := '0'; 							--periodic pulse that occurs at the oversampling rate
 	SIGNAL	parity_error		:	STD_LOGIC;										--receive parity error flag
