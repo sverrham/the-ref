@@ -34,10 +34,17 @@ for folder in path.split("\\"):
 	if "_lib" in folder:
 		library = folder
 
+
+compile(library, filename, compile_folder)
+
+if "tb_" in filename:
+	file = filename.split("\\")[-1]
+	entity = file.split(".")[0]
+	# print(entity)
+
+	run_tb(library, entity, compile_folder)
+
+
 # print(library)
-
-
-if cmd == "compile":
-	compile(library, filename, compile_folder)
-elif cmd == "run_tb":
-	run_tb(library, filename, compile_folder)
+# if cmd == "compile":
+# elif cmd == "run_tb":
