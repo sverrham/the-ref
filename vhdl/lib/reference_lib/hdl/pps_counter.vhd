@@ -7,16 +7,19 @@ use ieee.numeric_std.all;
 -- Simple counter for clock cycles between pps_i pulses.
 --
 entity pps_counter is
+    generic (
+        g_bits : in integer := 32
+    );
     port (
         clk_i: in std_logic;
         pps_i: in std_logic;
-        last_count_o: out unsigned(31 downto 0);
+        last_count_o: out unsigned(g_bits-1 downto 0);
         last_count_vld_o: out std_logic
         );
 end pps_counter;
 
 architecture rtl of pps_counter is
-    signal count : unsigned(31 downto 0) := (others => '0');
+    signal count : unsigned(g_bits-1 downto 0) := (others => '0');
     
     signal last_pps : std_logic := '0';
     attribute syn_preserve : boolean;

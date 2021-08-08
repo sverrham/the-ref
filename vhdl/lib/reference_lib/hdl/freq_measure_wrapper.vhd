@@ -24,9 +24,11 @@ end freq_measure_wrapper;
 
 architecture rtl of freq_measure_wrapper is
 
-    signal count : unsigned(31 downto 0);
+    constant c_bits : integer := 25;
+
+    signal count : unsigned(c_bits-1 downto 0);
     signal count_vld : std_logic;
-    signal error_ppb : signed(31 downto 0);
+    signal error_ppb : signed(c_bits-1 downto 0);
     signal error_ppb_vld : std_logic;
 
     -- signal high_offset : std_logic;
@@ -35,6 +37,9 @@ architecture rtl of freq_measure_wrapper is
 begin
 
     pps_counter : entity reference_lib.pps_counter
+    generic map(
+        g_bits => c_bits
+    )
     port map(
         clk_i => clk_i,
         pps_i => pps_i,
@@ -44,7 +49,8 @@ begin
     
     freq_offset_from_count : entity reference_lib.freq_offset_from_count
     generic map(
-        g_frequency => g_frequency
+        g_frequency => g_frequency,
+        g_bits => c_bits
     )
     port map(
         clk_i => clk_i,
@@ -90,14 +96,16 @@ begin
 
             if error_ppb_vld = '1' then
                 error_vld <= '1';
-                cur_error_ppb <= std_logic_vector(error_ppb);
+                cur_error_ppb <= (others => '0');
+                cur_error_ppb(error_ppb'range) <= std_logic_vector(error_ppb);
             end if;
             
             case state is
                 when idle =>
                     msg_req_o <= '1';
                     if count_vld = '1' then
-                        cur_count <= std_logic_vector(count);
+                        cur_count <= (others => '0');
+                        cur_count(count'range) <= std_logic_vector(count);
                         cnt <= 0;
                         state <= count_type;
                     elsif error_vld = '1' then
